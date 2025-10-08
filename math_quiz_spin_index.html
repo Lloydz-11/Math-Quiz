@@ -1,0 +1,274 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1" />
+  <title>Math Quiz Spin — Simple & Compound Interest</title>
+  <style>
+    :root{--bg:#0f1724;--card:#0b1220;--accent:#06b6d4;--muted:#94a3b8;--glass:rgba(255,255,255,0.03)}
+    *{box-sizing:border-box;font-family:Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial}
+    html,body{height:100%;margin:0;background:linear-gradient(180deg,#071026 0%, #041022 100%);color:#e6eef6}
+    .wrap{max-width:960px;margin:18px auto;padding:18px}
+    header{display:flex;gap:12px;align-items:center}
+    h1{font-size:20px;margin:0}
+    .sub{color:var(--muted);font-size:13px}
+
+    .game{display:grid;grid-template-columns:1fr 360px;gap:16px;margin-top:14px}
+    @media(max-width:760px){.game{grid-template-columns:1fr;}.right{order:-1}}
+
+    .card{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));border-radius:14px;padding:16px;box-shadow:0 6px 18px rgba(2,6,23,0.6)}
+    .question{font-size:18px;margin-bottom:12px}
+    .choices{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .choice{background:var(--glass);padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.03);cursor:pointer}
+    .choice.correct{outline:3px solid rgba(34,197,94,0.18)}
+    .choice.wrong{outline:3px solid rgba(239,68,68,0.12)}
+    .meta{display:flex;justify-content:space-between;align-items:center;margin-top:12px}
+
+    .right{display:flex;flex-direction:column;gap:12px}
+    .wheel-wrap{display:flex;align-items:center;justify-content:center;flex-direction:column;gap:8px}
+    .wheel{width:300px;height:300px;border-radius:50%;position:relative;display:grid;place-items:center;overflow:visible}
+    .wheel-inner{position:absolute;inset:0;border-radius:50%;display:grid;place-items:center;background:transparent}
+    .pointer{width:0;height:0;border-left:14px solid transparent;border-right:14px solid transparent;border-bottom:20px solid #fffb;position:relative;top:-160px;filter:drop-shadow(0 4px 6px rgba(0,0,0,0.6))}
+    .spin-btn{background:linear-gradient(90deg,#06b6d4,#3b82f6);padding:10px 14px;border-radius:10px;color:#04232b;border:none;font-weight:600;box-shadow:0 6px 18px rgba(9,43,56,0.5);cursor:pointer}
+
+    .small{font-size:13px;color:var(--muted)}
+    .progress{height:8px;background:rgba(255,255,255,0.04);border-radius:6px;overflow:hidden}
+    .progress > i{display:block;height:100%;background:linear-gradient(90deg,#06b6d4,#3b82f6);width:0%}
+
+    .center{display:grid;place-items:center}
+    .big-score{font-size:28px;font-weight:700}
+    footer{margin-top:14px;color:var(--muted);font-size:13px}
+
+    /* wheel labels styles */
+    .slice-label{position:absolute;left:50%;top:6%;transform-origin:0 50%;font-size:11px;width:60px;text-align:center}
+
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div>
+        <h1>Math Quiz Spin — Simple & Compound Interest</h1>
+        <div class="sub">10 questions • Correct = 1 spin • Points per spin: 1–20</div>
+      </div>
+    </header>
+
+    <div class="game">
+      <div class="left card">
+        <div class="meta">
+          <div class="small">Player: <strong id="playerName">Player</strong></div>
+          <div class="small">Question: <span id="qIndex">0</span>/10</div>
+        </div>
+
+        <div style="margin-top:10px">
+          <div class="question" id="questionText">Loading...</div>
+          <div class="choices" id="choices"></div>
+        </div>
+
+        <div class="meta" style="margin-top:14px">
+          <div class="small">Status: <span id="status">Answer to earn a spin</span></div>
+          <div class="small">Score: <strong id="score">0</strong></div>
+        </div>
+
+        <div style="margin-top:14px">
+          <div class="progress" aria-hidden>
+            <i id="progBar"></i>
+          </div>
+        </div>
+
+        <div style="display:flex;gap:8px;margin-top:12px">
+          <button id="nextBtn" class="spin-btn" style="background:#334155">Next Question</button>
+          <button id="restartBtn" class="spin-btn" style="background:#10b981">Restart Game</button>
+        </div>
+
+      </div>
+
+      <div class="right">
+        <div class="card wheel-wrap center">
+          <div class="pointer" aria-hidden></div>
+          <div class="wheel" id="wheel" title="Wheel of Points">
+            <div class="wheel-inner" id="wheelInner"></div>
+          </div>
+          <div style="display:flex;gap:10px;align-items:center">
+            <button id="spinBtn" class="spin-btn" disabled>Spin</button>
+            <div class="small">Last spin: <span id="lastSpin">—</span></div>
+          </div>
+        </div>
+
+        <div class="card center">
+          <div class="small">Total Points</div>
+          <div class="big-score" id="totalPoints">0</div>
+          <div style="margin-top:8px" class="small">Correct answers grant a spin. Final score shown after Q10.</div>
+        </div>
+      </div>
+    </div>
+
+    <footer>Mobile-friendly. To use on a phone: save this file as <code>index.html</code> and open it in the browser.</footer>
+  </div>
+
+<script>
+// Questions: 10 math questions focused on simple & compound interest
+const questions = [
+  {q: 'If P = 10,000, r = 5% per year (simple interest), and t = 2 years, what is the interest earned?', choices:['100','500','1,000','1,050'], a:2},
+  {q: 'A principal of ₱8,000 grows to ₱8,800 in 1 year. What is the simple interest rate per year?', choices:['5%','8%','10%','12%'], a:2},
+  {q: 'What is the amount after 2 years with compound interest, P = ₱5,000, r = 10% compounded annually?', choices:['₱6,000','₱6,050','₱6,250','₱6,500'], a:2},
+  {q: 'If interest is compounded semi-annually, how many times is interest applied in 3 years?', choices:['3','6','2','9'], a:1},
+  {q: 'Which formula gives compound amount A for principal P, rate r (decimal), n times per year, t years?', choices:['A = P(1+rt)','A = P(1 + r/n)^{nt}','A = P(1 + rt/n)','A = P(1+r)^t'], a:1},
+  {q: 'If ₱12,000 is invested at 6% simple interest for 3 years, total interest is?', choices:['₱2160','₱216','₱720','₱4320'], a:0},
+  {q: 'A loan of ₱2,000 at 8% compound annually for 2 years results in amount?', choices:['₱2,320','₱2,328','₱2,320.00','₱2,336'], a:1},
+  {q: 'What is the effective annual rate if nominal rate is 6% compounded quarterly?', choices:['6.00%','6.09%','6.14%','6.25%'], a:1},
+  {q: 'Simple interest for P=₱1,500, r=7% for 4 months (use year=12 months) is?', choices:['₱35','₱42','₱210','₱17.5'], a:0},
+  {q: 'Which situation best uses simple interest instead of compound interest?', choices:['Savings account','Short-term loan','Retirement fund','Investment reinvesting interest'], a:1}
+];
+
+// map answers indexes corrected for a few where label had formatting
+// ensure choices display without leading currency for consistency
+
+let order = shuffle(Array.from({length:questions.length},(_,i)=>i));
+let current = 0; let spinsAvailable = 0; let totalPoints = 0; let lastSpin = null; let playerName = 'Player';
+
+// setup wheel with 20 slices values 1..20
+const slices = Array.from({length:20},(_,i)=>i+1);
+const wheel = document.getElementById('wheel');
+const wheelInner = document.getElementById('wheelInner');
+const spinBtn = document.getElementById('spinBtn');
+const scoreSpan = document.getElementById('score');
+const totalPointsSpan = document.getElementById('totalPoints');
+const lastSpinSpan = document.getElementById('lastSpin');
+const qIndex = document.getElementById('qIndex');
+const questionText = document.getElementById('questionText');
+const choicesDiv = document.getElementById('choices');
+const status = document.getElementById('status');
+const progBar = document.getElementById('progBar');
+const nextBtn = document.getElementById('nextBtn');
+const restartBtn = document.getElementById('restartBtn');
+const playerNameEl = document.getElementById('playerName');
+
+function init(){
+  playerName = prompt('Enter player name (optional):','Student') || 'Student';
+  playerNameEl.textContent = playerName;
+  buildWheel();
+  showQuestion();
+  updateProgress();
+}
+
+function buildWheel(){
+  // create conic-gradient background with varying hues
+  const colors = slices.map((v,i)=>`hsl(${(i*360/slices.length).toFixed(0)} 85% 50%)`);
+  const stops = colors.map((c,i)=>`${c} ${((i)/slices.length*100).toFixed(2)}% ${((i+1)/slices.length*100).toFixed(2)}%`).join(', ');
+  wheel.style.background = `conic-gradient(${stops})`;
+  wheelInner.innerHTML = '';
+  // create labels positioned around
+  const radius = 130;
+  slices.forEach((val,i)=>{
+    const angle = (i*360/slices.length) - (360/slices.length)/2; // center label
+    const span = document.createElement('div');
+    span.className = 'slice-label';
+    span.style.transform = `translate(-50%, -50%) rotate(${angle}deg)`;
+    span.style.left = '50%';
+    span.style.top = '10%';
+    span.textContent = val;
+    wheelInner.appendChild(span);
+  });
+}
+
+let isSpinning = false;
+let currentRotation = 0;
+
+spinBtn.addEventListener('click', async ()=>{
+  if(isSpinning || spinsAvailable<=0) return;
+  isSpinning = true; spinBtn.disabled = true;
+  status.textContent = 'Spinning...';
+  // pick random slice
+  const pick = Math.floor(Math.random()*slices.length); // 0..19
+  const sliceAngle = 360/slices.length;
+  // calculate target rotation so that the picked slice lands at top (pointer at top)
+  // slice center angle (from 0 at top, clockwise) = pick*sliceAngle + sliceAngle/2
+  const targetAngle = (360 - (pick*sliceAngle + sliceAngle/2)) % 360;
+  const extraSpins = 3 + Math.floor(Math.random()*3); // 3-5 full rotations
+  const final = extraSpins*360 + targetAngle;
+  // animate
+  const dur = 3500 + Math.random()*800;
+  wheel.style.transition = `transform ${dur}ms cubic-bezier(.15,.9,.2,1)`;
+  currentRotation = (currentRotation + final) % 360;
+  wheel.style.transform = `rotate(${currentRotation}deg)`;
+
+  await wait(dur+50);
+  // finish
+  const awarded = slices[pick];
+  spinsAvailable--;
+  totalPoints += awarded;
+  lastSpin = awarded;
+  lastSpinSpan.textContent = awarded + ' pts';
+  totalPointsSpan.textContent = totalPoints;
+  scoreSpan.textContent = spinsAvailable;
+  status.textContent = `You won ${awarded} points!`;
+  isSpinning = false; spinBtn.disabled = spinsAvailable<=0;
+});
+
+nextBtn.addEventListener('click', ()=>{
+  // move to next question even if unanswered or answered
+  if(current < questions.length-1){
+    current++; showQuestion(); updateProgress();
+  } else {
+    // game over
+    endGame();
+  }
+});
+
+restartBtn.addEventListener('click', ()=>{
+  if(confirm('Restart game?')) location.reload();
+});
+
+function showQuestion(){
+  const q = questions[order[current]];
+  qIndex.textContent = current+1;
+  questionText.textContent = q.q;
+  choicesDiv.innerHTML = '';
+  q.choices.forEach((c,idx)=>{
+    const b = document.createElement('div'); b.className='choice'; b.tabIndex=0;
+    b.innerHTML = `<strong>${String.fromCharCode(65+idx)}.</strong> <span style='margin-left:6px'>${c}</span>`;
+    b.addEventListener('click', ()=>selectAnswer(idx,b));
+    choicesDiv.appendChild(b);
+  });
+}
+
+function selectAnswer(idx,el){
+  const q = questions[order[current]];
+  // disable all choices
+  Array.from(choicesDiv.children).forEach(ch=>ch.style.pointerEvents='none');
+  if(idx===q.a){
+    el.classList.add('correct');
+    status.textContent = 'Correct! You earned 1 spin.';
+    spinsAvailable++;
+    scoreSpan.textContent = spinsAvailable;
+    spinBtn.disabled = false;
+  } else {
+    el.classList.add('wrong');
+    // highlight correct
+    const correctEl = choicesDiv.children[q.a];
+    if(correctEl) correctEl.classList.add('correct');
+    status.textContent = 'Incorrect — no spin. Review and move on.';
+  }
+}
+
+function endGame(){
+  // show modal-like summary (simple)
+  const msg = `Game over, ${playerName}!\nTotal points: ${totalPoints}\nSpins used: ${questions.length - (spinsAvailable)}\nCorrect answers (spins earned): ${questions.length - order.filter((o,i)=>false).length}`;
+  alert(`Game Over!\nPlayer: ${playerName}\nTotal Points: ${totalPoints}`);
+}
+
+function updateProgress(){
+  const pct = ((current)/ (questions.length-1))*100;
+  progBar.style.width = pct + '%';
+}
+
+function wait(ms){return new Promise(r=>setTimeout(r,ms));}
+
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
+
+// initialize
+init();
+</script>
+</body>
+</html>
